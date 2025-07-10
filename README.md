@@ -1,0 +1,2 @@
+# mageos
+Osdev experiment
