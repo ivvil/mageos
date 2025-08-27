@@ -14,17 +14,17 @@
       pkgs = import nixpkgs {
         inherit system;
       };
-      x86_64-cross = pkgs.pkgsCross.x86_64-embedded;
+      cross = pkgs.pkgsCross.i686-embedded;
     in {
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
-          x86_64-cross.buildPackages.gcc
+          cross.buildPackages.clang
           # gcc
         ];
       };
 
       packages = {
-        mageos = x86_64-cross.stdenv.mkDerivation {
+        mageos = cross.stdenv.mkDerivation {
           name = "mageos";
           src = self;
           # TODO Setup build commands
