@@ -14,11 +14,11 @@
       pkgs = import nixpkgs {
         inherit system;
       };
-      cross = pkgs.pkgsCross.i686-embedded;
+      cross = pkgs.pkgsCross.x86_64-embedded;
     in {
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
-          cross.buildPackages.clang
+          cross.buildPackages.gcc
           # gcc
         ];
       };
