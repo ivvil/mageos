@@ -1,11 +1,82 @@
+#include "limine.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-/* #if defined(__linux__) */
-/* 	#error "This code must be compiled with a cross-compiler" */
-/* #elif !defined(__i386__) */
-/* 	#error "This code must be compiled with an x86-elf compiler" */
-/* #endif */
+__attribute__((
+    used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
+
+__attribute__((
+    used,
+    section(
+        ".limine_requests"))) static volatile struct limine_framebuffer_request
+    fb_req = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 0};
+
+__attribute__((used,
+               section(".limine_requests_"
+                       "start"))) static volatile LIMINE_REQUESTS_START_MARKER;
+
+__attribute__((
+    used,
+    section(
+        ".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
+
+static void hcf(void) {
+  for (;;) {
+    asm("hlt");
+  }
+}
+
+void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
+  uint8_t *restrict pdest = (uint8_t *restrict)dest;
+  const uint8_t *restrict psrc = (const uint8_t *restrict)src;
+
+  for (size_t i = 0; i < n; i++) {
+    pdest[i] = psrc[i];
+  }
+
+  return dest;
+}
+
+void *memset(void *s, int c, size_t n) {
+  uint8_t *p = (uint8_t *)s;
+
+  for (size_t i = 0; i < n; i++) {
+    p[i] = (uint8_t)c;
+  }
+
+  return s;
+}
+
+void *memmove(void *dest, const void *src, size_t n) {
+  uint8_t *pdest = (uint8_t *)dest;
+  const uint8_t *psrc = (const uint8_t *)src;
+
+  if (src > dest) {
+    for (size_t i = 0; i < n; i++) {
+      pdest[i] = psrc[i];
+    }
+  } else if (src < dest) {
+    for (size_t i = n; i > 0; i--) {
+      pdest[i - 1] = psrc[i - 1];
+    }
+  }
+
+  return dest;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n) {
+  const uint8_t *p1 = (const uint8_t *)s1;
+  const uint8_t *p2 = (const uint8_t *)s2;
+
+  for (size_t i = 0; i < n; i++) {
+    if (p1[i] != p2[i]) {
+      return p1[i] < p2[i] ? -1 : 1;
+    }
+  }
+
+  return 0;
+}
 
 /* Textmode buff */
 volatile uint16_t *vga_buff = (uint16_t *)0xB8000;
@@ -61,7 +132,24 @@ void term_print(const char *str) {
 }
 
 void kmain(void) {
-  term_init();
+  /* term_init(); */
 
-  term_print("Hello, World!\n");
-}    
+  /* term_print("Hello, World!\n"); */
+
+  if (LIMINE_BASE_REVISION_SUPPORTED == false) {
+    hcf();
+  }
+
+  if (fb_req.response == NULL || fb_req.response->framebuffer_count < 1) {
+    hcf();
+  }
+
+  struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
+
+  for (size_t i = 0; i < 100; i++) {
+    volatile uint32_t *fb_ptr = fb->address;
+    fb_ptr[i * (fb->pitch / 4) + i] = 0xffffff;
+  }
+
+  hcf();
+}
